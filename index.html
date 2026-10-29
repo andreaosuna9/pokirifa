@@ -102,9 +102,20 @@
     <!-- CAPA DE SERPENTINA DE POKIS POR DETRÁS (z-0) -->
     <div id="ambient-stickers-layer" class="fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-40"></div>
 
-    <!-- ENCABEZADO MINIMALISTA -->
-    <header class="border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-40">
-        <div class="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
+    <!-- ENCABEZADO DESPLEGABLE -->
+<header class="border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-xl mx-auto px-4">
+        <!-- Barra superior con el botón de ocultar/mostrar -->
+        <div class="h-10 flex items-center justify-between border-b border-slate-50">
+            <span class="text-[10px] font-extrabold tracking-wider uppercase text-slate-400"></span>
+            <button onclick="toggleHeaderContent()" class="text-xs font-bold text-slate-500 hover:text-brand-pink flex items-center gap-1 py-1 px-2 rounded hover:bg-slate-50 transition-colors">
+                <span id="header-toggle-text"></span>
+                <i id="header-toggle-icon" data-lucide="chevron-up" class="w-4 h-4 transition-transform duration-200"></i>
+            </button>
+        </div>
+
+        <!-- Contenido desplegable (Avatar, Título y Botón Fotos) -->
+        <div id="header-content" class="h-16 flex items-center justify-between transition-all duration-300 overflow-hidden">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden p-0.5">
                     <img id="header-avatar" src="https://placehold.co/100x100/FF2E93/ffffff?text=Poki" class="w-full h-full object-contain">
@@ -121,7 +132,8 @@
                 <span>Fotos Poki</span>
             </button>
         </div>
-    </header>
+    </div>
+</header>
 
     <main class="max-w-xl mx-auto px-4 pt-6 space-y-6 relative z-10">
 
@@ -756,6 +768,22 @@
                 toast.classList.add('opacity-0', 'pointer-events-none');
             }, 2200);
         }
+
+        function toggleHeaderContent() {
+    const content = document.getElementById('header-content');
+    const text = document.getElementById('header-toggle-text');
+    const icon = document.getElementById('header-toggle-icon');
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        text.innerText = "";
+        icon.style.transform = "rotate(0deg)";
+    } else {
+        content.classList.add('hidden');
+        text.innerText = "";
+        icon.style.transform = "rotate(180deg)";
+    }
+}
     </script>
 </body>
 </html>
