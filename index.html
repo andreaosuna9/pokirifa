@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Poki Rifa 🐶</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            pink: '#FF2E93',
+                            pinkHover: '#E6007A',
+                            purple: '#9B51E0',
+                            purpleHover: '#863ED0',
+                            dark: '#0F172A',
+                            surface: '#FAFAFB',
+                            border: '#E2E8F0'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #FFFFFF;
+            color: #0F172A;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Serpentina de Pokis flotando suavemente por detrás */
+        @keyframes pokiSerpentine {
+            0% { transform: translateY(0px) rotate(-8deg) scale(0.95); }
+            50% { transform: translateY(-16px) rotate(8deg) scale(1.05); }
+            100% { transform: translateY(0px) rotate(-8deg) scale(0.95); }
+        }
+
+        .poki-serpentine {
+            animation: pokiSerpentine 4.5s ease-in-out infinite;
+        }
+
+        /* Animación de mezcla de números */
+        @keyframes shuffleBounce {
+            0% { transform: scale(0.92); opacity: 0.6; filter: blur(2px); }
+            50% { transform: scale(1.05); opacity: 1; filter: blur(0px); }
+            100% { transform: scale(1); opacity: 0.9; }
+        }
+
+        .shuffling-num {
+            animation: shuffleBounce 0.12s ease-in-out infinite alternate;
+        }
+
+        /* Animación de latido de corazón */
+        @keyframes heartPulse {
+            0% { transform: scale(0.88); }
+            15% { transform: scale(1.15); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.22); }
+            70% { transform: scale(1); }
+        }
+
+        .heart-pulse {
+            animation: heartPulse 1.2s infinite ease-in-out;
+        }
+
+        @keyframes explodeHeart {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(2); opacity: 0.5; filter: blur(4px); }
+            100% { transform: scale(3.2); opacity: 0; }
+        }
+
+        .heart-explode {
+            animation: explodeHeart 0.25s forwards ease-out;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-white text-slate-900 pb-16 relative overflow-x-hidden">
+
+    <!-- Canvas para Confeti -->
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <!-- CAPA DE SERPENTINA DE POKIS POR DETRÁS (z-0) -->
+    <div id="ambient-stickers-layer" class="fixed inset-0 z-0 pointer-events-none overflow-hidden opacity-40"></div>
+
+    <!-- ENCABEZADO MINIMALISTA -->
+    <header class="border-b border-slate-100 bg-white/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden p-0.5">
+                    <img id="header-avatar" src="https://placehold.co/100x100/FF2E93/ffffff?text=Poki" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base tracking-tight text-slate-900 leading-none">Poki Rifa</h1>
+                    <p class="text-[11px] font-medium text-slate-400 mt-0.5">Gastos veterinarios de Poki</p>
+                </div>
+            </div>
+
+            <!-- Botón para abrir modal selector de fotos -->
+            <button onclick="openPhotoConfigModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm active:scale-95">
+                <i data-lucide="image" class="w-3.5 h-3.5 text-brand-pink"></i>
+                <span>Fotos Poki</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-xl mx-auto px-4 pt-6 space-y-6 relative z-10">
+
+        <!-- TARJETAS DE PREMIOS -->
+        <div class="space-y-2 relative">
+            <div class="flex items-center justify-between px-0.5">
+                <span id="prizes-progress-tag" class="text-xs font-bold text-brand-purple bg-brand-purple/5 px-2 py-0.5 rounded-md border border-brand-purple/10">Premio 1 de 3</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2.5">
+                <!-- Premio 1 -->
+                <div id="card-prize-1" class="bg-slate-50 border border-slate-200 rounded-xl p-3 transition-all flex flex-col justify-between h-28 relative">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-pink block">1er Premio</span>
+                        <p class="text-[11px] font-semibold text-slate-600 leading-tight mt-1">Coloración y tratamiento capilar</p>
+                    </div>
+                    <div id="val-prize-1" class="text-xl font-extrabold text-slate-300">--</div>
+                </div>
+
+                <!-- Premio 2 -->
+                <div id="card-prize-2" class="bg-slate-50 border border-slate-200 rounded-xl p-3 transition-all flex flex-col justify-between h-28 relative">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-purple block">2do Premio</span>
+                        <p class="text-[11px] font-semibold text-slate-600 leading-tight mt-1">Kit de cuidado capilar</p>
+                    </div>
+                    <div id="val-prize-2" class="text-xl font-extrabold text-slate-300">--</div>
+                </div>
+
+                <!-- Premio 3 -->
+                <div id="card-prize-3" class="bg-slate-50 border border-slate-200 rounded-xl p-3 transition-all flex flex-col justify-between h-28 relative">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-purple block">3er Premio</span>
+                        <p class="text-[11px] font-semibold text-slate-600 leading-tight mt-1">Kit de cuidado capilar</p>
+                    </div>
+                    <div id="val-prize-3" class="text-xl font-extrabold text-slate-300">--</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DISPLAY CENTRAL DE RULETA Y GIRADOR -->
+        <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-xs text-center space-y-5 relative">
+            
+            <div class="bg-slate-50 border border-slate-200/80 rounded-xl py-8 px-4 relative overflow-hidden flex flex-col items-center justify-center min-h-[140px]">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1" id="roulette-status-label">
+                    Número Seleccionado
+                </div>
+
+                <div id="roulette-display" class="text-6xl font-extrabold tracking-tight text-slate-900 transition-all">
+                    00
+                </div>
+            </div>
+
+            <button id="spin-btn" onclick="startSpin()" class="w-full py-3.5 bg-brand-pink hover:bg-brand-pinkHover text-white rounded-xl font-extrabold text-base transition-all shadow-sm active:scale-[0.99] flex items-center justify-center gap-2">
+                <i data-lucide="dices" class="w-5 h-5"></i>
+                <span id="spin-btn-text">GIRAR Y REVOLVER</span>
+            </button>
+
+            <div class="flex items-center justify-between pt-1 text-xs">
+                <button onclick="resetRaffleConfirm()" class="text-slate-400 hover:text-slate-600 font-semibold flex items-center gap-1 transition-colors">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reiniciar
+                </button>
+                <span id="remaining-count-tag" class="text-slate-500 font-bold bg-slate-100 px-2.5 py-1 rounded-md">
+                    70 números
+                </span>
+            </div>
+        </div>
+
+        <!-- GESTOR MINIMALISTA DE NÚMEROS -->
+        <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <i data-lucide="list-numbers" class="w-4 h-4 text-brand-purple"></i>
+                </h3>
+                <button onclick="toggleManagePanel()" class="text-xs font-bold text-brand-purple hover:underline">
+                    <span id="manage-toggle-text">Editar</span>
+                </button>
+            </div>
+
+            <div id="manage-panel" class="hidden pt-2 border-t border-slate-100 space-y-2.5">
+                <div class="flex gap-2">
+                    <input type="number" id="add-number-input" placeholder="Añadir número (ej. 71)" class="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-brand-purple">
+                    <button onclick="addNumber()" class="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors">
+                        Añadir
+                    </button>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="resetNumbersBase()" class="flex-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg font-bold transition-colors">
+                        Restablecer (1-70)
+                    </button>
+                    <button onclick="clearAllNumbers()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg font-bold transition-colors">
+                        Vaciar
+                    </button>
+                </div>
+            </div>
+
+            <div id="numbers-grid" class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto no-scrollbar pt-1"></div>
+        </div>
+
+    </main>
+
+    <!-- OVERLAY ANIMACIÓN DEL CORAZÓN ROSA EXPLOSIVO -->
+    <div id="heart-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="text-center relative flex flex-col items-center justify-center p-4 w-full max-w-sm min-h-[260px]">
+            
+            <div id="heart-element" onclick="triggerHeartExplosion()" class="cursor-pointer text-brand-pink text-8xl md:text-9xl heart-pulse filter drop-shadow-[0_0_35px_rgba(255,46,147,0.7)] transition-transform active:scale-95">
+                ❤️
+            </div>
+
+            <p id="heart-instruction" class="text-white font-bold text-sm mt-6 tracking-wide animate-bounce">
+            </p>
+
+            <!-- Foto PNG de Poki revelada sin marco -->
+            <div id="revealed-poki-avatar" class="hidden absolute w-48 h-48 flex items-center justify-center transform scale-0 transition-transform duration-500">
+                <img id="heart-poki-img" src="https://placehold.co/100x100/FF2E93/ffffff?text=Poki" class="w-full h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.4)]">
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PREMIUM DE GANADORES -->
+    <div id="winner-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl w-full max-w-sm p-6 text-center space-y-5 shadow-2xl transform scale-95 transition-transform duration-300 border border-slate-100" id="winner-modal-card">
+            
+            <!-- Poki PNG limpia sin marco cuadrado -->
+            <div class="w-24 h-24 mx-auto flex items-center justify-center">
+                <img id="modal-poki-img" src="https://placehold.co/100x100/FF2E93/ffffff?text=Poki" class="w-full h-full object-contain filter drop-shadow-md">
+            </div>
+
+            <div>
+                <h2 class="font-extrabold text-2xl text-slate-900 tracking-tight">¡Ganadores!</h2>
+                <p class="text-xs text-slate-500 font-semibold mt-1">Muchas gracias por apoyar a Poki 🐾</p>
+            </div>
+
+            <div class="space-y-2 text-left bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-pink block">1er Premio</span>
+                        <span class="text-xs text-slate-500 font-semibold">Coloración y tratamiento</span>
+                    </div>
+                    <span id="modal-win-1" class="font-extrabold text-lg text-brand-pink">--</span>
+                </div>
+
+                <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-purple block">2do Premio</span>
+                        <span class="text-xs text-slate-500 font-semibold">Kit de cuidado capilar</span>
+                    </div>
+                    <span id="modal-win-2" class="font-extrabold text-lg text-brand-purple">--</span>
+                </div>
+
+                <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-2xs">
+                    <div>
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-brand-purple block">3er Premio</span>
+                        <span class="text-xs text-slate-500 font-semibold">Kit de cuidado capilar</span>
+                    </div>
+                    <span id="modal-win-3" class="font-extrabold text-lg text-brand-purple">--</span>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <button onclick="closeWinnerModal()" class="w-full py-3 bg-brand-pink hover:bg-brand-pinkHover text-white rounded-xl font-bold text-sm shadow-sm transition-colors">
+                    Ver resultados
+                </button>
+                <button onclick="resetRaffle(); closeWinnerModal();" class="w-full py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors">
+                    Volver
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL SELECTOR DE FOTOS DE POKI POR ROL -->
+    <div id="photo-config-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl w-full max-w-sm p-5 space-y-4 shadow-2xl border border-slate-100">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-pink"></i> Configurar Fotos de Poki
+                </h3>
+                <button onclick="closePhotoConfigModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">&times;</button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <!-- 1. Foto de Perfil & Ganadores -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-slate-700">1. Perfil y Ganadores</div>
+                        <div class="text-[10px] text-slate-400">Encabezado y modal de resultados</div>
+                    </div>
+                    <label class="cursor-pointer bg-brand-pink text-white px-2.5 py-1.5 rounded text-[11px] font-bold hover:bg-brand-pinkHover transition-colors">
+                        Subir PNG
+                        <input type="file" accept="image/png,image/*" class="hidden" onchange="uploadSingleRole(event, 'main')">
+                    </label>
+                </div>
+
+                <!-- 2. Foto del Corazón -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-slate-700">2. Foto del Corazón</div>
+                        <div class="text-[10px] text-slate-400">Sale cuando explota el corazón</div>
+                    </div>
+                    <label class="cursor-pointer bg-brand-purple text-white px-2.5 py-1.5 rounded text-[11px] font-bold hover:bg-brand-purpleHover transition-colors">
+                        Subir PNG
+                        <input type="file" accept="image/png,image/*" class="hidden" onchange="uploadSingleRole(event, 'heart')">
+                    </label>
+                </div>
+
+                <!-- 3. Stickers Serpentina Fondo (Múltiples) -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-slate-700">3. Serpentina Fondo</div>
+                        <div class="text-[10px] text-slate-400">Múltiples fotos flotando por detrás</div>
+                    </div>
+                    <label class="cursor-pointer bg-slate-800 text-white px-2.5 py-1.5 rounded text-[11px] font-bold hover:bg-slate-700 transition-colors">
+                        Subir PNGs
+                        <input type="file" accept="image/png,image/*" multiple class="hidden" onchange="uploadAmbientPokis(event)">
+                    </label>
+                </div>
+            </div>
+
+            <button onclick="closePhotoConfigModal()" class="w-full py-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg hover:bg-slate-200 transition-colors">
+                Guardar y Cerrar
+            </button>
+        </div>
+    </div>
+
+    <!-- TOAST DE NOTIFICACIÓN -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-lg opacity-0 pointer-events-none transition-all z-50 flex items-center gap-2 border border-slate-800">
+        <i data-lucide="info" class="w-4 h-4 text-brand-pink"></i>
+        <span id="toast-msg">Notificación</span>
+    </div>
+
+    <script>
+        // Estado General
+        let activeNumbers = [];
+        let winners = [null, null, null];
+        let currentRound = 0;
+        let isSpinning = false;
+        let heartExploded = false;
+        let autoExplodeTimer = null;
+        let ambientPokis = [];
+
+        window.onload = function() {
+            lucide.createIcons();
+            resetNumbersBase();
+            updateUI();
+        };
+
+        function resetNumbersBase() {
+            activeNumbers = [];
+            for (let i = 1; i <= 70; i++) {
+                activeNumbers.push(i);
+            }
+            shuffleArray(activeNumbers);
+            renderNumbersGrid();
+        }
+
+        function renderNumbersGrid() {
+            const grid = document.getElementById('numbers-grid');
+            grid.innerHTML = '';
+
+            const sorted = [...activeNumbers].sort((a, b) => a - b);
+            sorted.forEach(num => {
+                const badge = document.createElement('div');
+                badge.className = 'flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-2 py-0.5 rounded-md border border-slate-200/60 transition-colors';
+                badge.innerHTML = `
+                    <span>${num}</span>
+                    <button onclick="removeNumber(${num})" class="text-slate-400 hover:text-red-500 ml-0.5">
+                        &times;
+                    </button>
+                `;
+                grid.appendChild(badge);
+            });
+
+            document.getElementById('remaining-count-tag').innerText = `${activeNumbers.length} números`;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function startSpin() {
+            if (isSpinning) return;
+
+            if (currentRound >= 3) {
+                launchHeartSequence();
+                return;
+            }
+
+            if (activeNumbers.length === 0) {
+                showToast("No quedan números disponibles.");
+                return;
+            }
+
+            isSpinning = true;
+            const spinBtn = document.getElementById('spin-btn');
+            const display = document.getElementById('roulette-display');
+            const statusLabel = document.getElementById('roulette-status-label');
+
+            spinBtn.disabled = true;
+            spinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            statusLabel.innerText = "...";
+            statusLabel.className = "text-[11px] font-bold uppercase tracking-wider text-brand-purple mb-1 animate-pulse";
+            display.classList.add('shuffling-num', 'text-brand-pink');
+
+            shuffleArray(activeNumbers);
+
+            let counter = 0;
+            const shuffleInterval = setInterval(() => {
+                const randomTemp = activeNumbers[Math.floor(Math.random() * activeNumbers.length)];
+                display.innerText = randomTemp < 10 ? `0${randomTemp}` : randomTemp;
+                counter++;
+            }, 80);
+
+            setTimeout(() => {
+                clearInterval(shuffleInterval);
+                display.classList.remove('shuffling-num');
+
+                const winnerIndex = Math.floor(Math.random() * activeNumbers.length);
+                const winnerNum = activeNumbers[winnerIndex];
+
+                display.innerText = winnerNum < 10 ? `0${winnerNum}` : winnerNum;
+                display.className = "text-6xl font-extrabold tracking-tight text-brand-pink scale-110 transition-transform";
+
+                winners[currentRound] = winnerNum;
+                activeNumbers.splice(winnerIndex, 1);
+
+                confetti({
+                    particleCount: 50,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+
+                currentRound++;
+                updateUI();
+                renderNumbersGrid();
+
+                statusLabel.innerText = `¡Ganador ${currentRound}° Premio!`;
+                statusLabel.className = "text-[11px] font-bold uppercase tracking-wider text-brand-pink mb-1";
+
+                isSpinning = false;
+                spinBtn.disabled = false;
+                spinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                if (currentRound === 3) {
+                    setTimeout(() => {
+                        launchHeartSequence();
+                    }, 1200);
+                }
+
+            }, 2500);
+        }
+
+        function updateUI() {
+            for (let i = 0; i < 3; i++) {
+                const valEl = document.getElementById(`val-prize-${i+1}`);
+                const cardEl = document.getElementById(`card-prize-${i+1}`);
+
+                if (winners[i] !== null) {
+                    valEl.innerText = `#${winners[i]}`;
+                    valEl.className = "text-2xl font-extrabold text-brand-pink mt-1";
+                    cardEl.className = "bg-pink-50/50 border border-brand-pink/40 rounded-xl p-3 transition-all flex flex-col justify-between h-28 relative";
+                } else {
+                    valEl.innerText = "--";
+                    valEl.className = "text-xl font-extrabold text-slate-300 mt-1";
+                    cardEl.className = "bg-slate-50 border border-slate-200 rounded-xl p-3 transition-all flex flex-col justify-between h-28 relative";
+                }
+            }
+
+            const btnText = document.getElementById('spin-btn-text');
+            const progressTag = document.getElementById('prizes-progress-tag');
+
+            if (currentRound === 0) {
+                btnText.innerText = "1ER PREMIO";
+                progressTag.innerText = "Premio 1 de 3";
+            } else if (currentRound === 1) {
+                btnText.innerText = "2DO PREMIO";
+                progressTag.innerText = "Premio 2 de 3";
+            } else if (currentRound === 2) {
+                btnText.innerText = "3ER PREMIO";
+                progressTag.innerText = "Premio 3 de 3";
+            } else {
+                btnText.innerText = "VER RESULTADOS";
+                progressTag.innerText = "Sorteo Finalizado";
+            }
+        }
+
+        /* SECUENCIA Y ANIMACIÓN DEL CORAZÓN ROSA EXPLOSIVO */
+        function launchHeartSequence() {
+            heartExploded = false;
+            if (autoExplodeTimer) clearTimeout(autoExplodeTimer);
+
+            const overlay = document.getElementById('heart-overlay');
+            const heartEl = document.getElementById('heart-element');
+            const instruction = document.getElementById('heart-instruction');
+            const avatar = document.getElementById('revealed-poki-avatar');
+
+            heartEl.style.display = 'block';
+            heartEl.style.opacity = '1';
+            heartEl.className = "cursor-pointer text-brand-pink text-8xl md:text-9xl heart-pulse filter drop-shadow-[0_0_35px_rgba(255,46,147,0.7)] transition-transform active:scale-95";
+            
+            instruction.classList.remove('hidden');
+            avatar.classList.add('hidden');
+            avatar.classList.remove('scale-100');
+            avatar.classList.add('scale-0');
+
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+            }, 10);
+
+            autoExplodeTimer = setTimeout(() => {
+                if (!heartExploded) {
+                    triggerHeartExplosion();
+                }
+            }, 2600);
+        }
+
+        function triggerHeartExplosion() {
+            if (heartExploded) return;
+            heartExploded = true;
+            if (autoExplodeTimer) clearTimeout(autoExplodeTimer);
+
+            const heartEl = document.getElementById('heart-element');
+            const instruction = document.getElementById('heart-instruction');
+            const avatar = document.getElementById('revealed-poki-avatar');
+
+            instruction.classList.add('hidden');
+            heartEl.classList.remove('heart-pulse');
+            heartEl.classList.add('heart-explode');
+
+            setTimeout(() => {
+                heartEl.style.display = 'none';
+            }, 200);
+
+            confetti({
+                particleCount: 120,
+                spread: 100,
+                origin: { y: 0.5 },
+                colors: ['#FF2E93', '#9B51E0', '#FF85C0', '#FFFFFF']
+            });
+
+            setTimeout(() => {
+                avatar.classList.remove('hidden');
+                setTimeout(() => {
+                    avatar.classList.remove('scale-0');
+                    avatar.classList.add('scale-100');
+                }, 50);
+            }, 250);
+
+            setTimeout(() => {
+                const overlay = document.getElementById('heart-overlay');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    showWinnerModal();
+                }, 300);
+            }, 2300);
+        }
+
+        function showWinnerModal() {
+            document.getElementById('modal-win-1').innerText = winners[0] !== null ? `#${winners[0]}` : '--';
+            document.getElementById('modal-win-2').innerText = winners[1] !== null ? `#${winners[1]}` : '--';
+            document.getElementById('modal-win-3').innerText = winners[2] !== null ? `#${winners[2]}` : '--';
+
+            const modal = document.getElementById('winner-modal');
+            const card = document.getElementById('winner-modal-card');
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                card.classList.remove('scale-95');
+                card.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeWinnerModal() {
+            const modal = document.getElementById('winner-modal');
+            const card = document.getElementById('winner-modal-card');
+
+            modal.classList.add('opacity-0');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // SELECTOR DE FOTOS POR ROL
+        function openPhotoConfigModal() {
+            const modal = document.getElementById('photo-config-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }
+
+        function closePhotoConfigModal() {
+            const modal = document.getElementById('photo-config-modal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function uploadSingleRole(e, role) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const src = event.target.result;
+                if (role === 'main') {
+                    document.getElementById('header-avatar').src = src;
+                    document.getElementById('modal-poki-img').src = src;
+                    showToast("Foto principal asignada");
+                } else if (role === 'heart') {
+                    document.getElementById('heart-poki-img').src = src;
+                    showToast("Foto del corazón asignada");
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function uploadAmbientPokis(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    ambientPokis.push(event.target.result);
+                    renderAmbientSerpentine();
+                };
+                reader.readAsDataURL(file);
+            });
+
+            showToast(`${files.length} foto(s) agregada(s) al fondo`);
+        }
+
+        function renderAmbientSerpentine() {
+            if (ambientPokis.length === 0) return;
+
+            const layer = document.getElementById('ambient-stickers-layer');
+            layer.innerHTML = '';
+
+            const positions = [
+                { top: '6%', left: '3%' },
+                { top: '12%', right: '4%' },
+                { top: '32%', left: '2%' },
+                { top: '44%', right: '3%' },
+                { top: '62%', left: '4%' },
+                { top: '76%', right: '5%' },
+                { top: '88%', left: '3%' }
+            ];
+
+            positions.forEach((pos, i) => {
+                const src = ambientPokis[i % ambientPokis.length];
+                const img = document.createElement('img');
+                img.src = src;
+                img.className = 'absolute w-14 h-14 object-contain poki-serpentine filter drop-shadow-xs';
+                
+                if (pos.top) img.style.top = pos.top;
+                if (pos.left) img.style.left = pos.left;
+                if (pos.right) img.style.right = pos.right;
+                img.style.animationDelay = `${i * 0.6}s`;
+
+                layer.appendChild(img);
+            });
+        }
+
+        function toggleManagePanel() {
+            const panel = document.getElementById('manage-panel');
+            const toggleText = document.getElementById('manage-toggle-text');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                toggleText.innerText = "Ocultar";
+            } else {
+                panel.classList.add('hidden');
+                toggleText.innerText = "Editar";
+            }
+        }
+
+        function addNumber() {
+            const input = document.getElementById('add-number-input');
+            const val = parseInt(input.value);
+
+            if (isNaN(val)) return;
+
+            if (activeNumbers.includes(val) || winners.includes(val)) {
+                showToast("Este número ya existe o ya ganó");
+                return;
+            }
+
+            activeNumbers.push(val);
+            input.value = '';
+            renderNumbersGrid();
+            showToast(`Número #${val} añadido`);
+        }
+
+        function removeNumber(num) {
+            activeNumbers = activeNumbers.filter(n => n !== num);
+            renderNumbersGrid();
+            showToast(`Número #${num} eliminado`);
+        }
+
+        function clearAllNumbers() {
+            activeNumbers = [];
+            renderNumbersGrid();
+            showToast("Lista vaciada");
+        }
+
+        function resetRaffleConfirm() {
+            if (confirm("¿Deseas reiniciar el sorteo?")) {
+                resetRaffle();
+            }
+        }
+
+        function resetRaffle() {
+            winners = [null, null, null];
+            currentRound = 0;
+            resetNumbersBase();
+            updateUI();
+            document.getElementById('roulette-display').innerText = "00";
+            document.getElementById('roulette-status-label').innerText = "Número Seleccionado";
+            showToast("Sorteo reiniciado");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2200);
+        }
+    </script>
+</body>
+</html>
